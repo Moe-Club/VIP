@@ -202,6 +202,18 @@ class Module final {
 public:
     Module();
 
+    void SetPressed(int id, bool pressed) {
+        buttons_twitch[id] = pressed;
+    }
+
+    void SetCircle(std::tuple<float, float> state) {
+        circle_pad_twitch = state;
+    }
+
+    void SetTouch(std::tuple<float, float, bool> state) {
+        touch_twitch = state;
+    }
+
     class Interface : public ServiceFramework<Interface> {
     public:
         Interface(std::shared_ptr<Module> hid, const char* name, u32 max_session);
@@ -326,9 +338,12 @@ private:
     std::atomic<bool> is_device_reload_pending{true};
     std::array<std::unique_ptr<Input::ButtonDevice>, Settings::NativeButton::NUM_BUTTONS_HID>
         buttons;
+    std::array<bool, Settings::NativeButton::NUM_BUTTONS_HID> buttons_twitch;
     std::unique_ptr<Input::AnalogDevice> circle_pad;
+    std::tuple<float, float> circle_pad_twitch;
     std::unique_ptr<Input::MotionDevice> motion_device;
     std::unique_ptr<Input::TouchDevice> touch_device;
+    std::tuple<float, float, bool> touch_twitch;
 };
 
 void InstallInterfaces(SM::ServiceManager& service_manager);
@@ -337,5 +352,8 @@ void InstallInterfaces(SM::ServiceManager& service_manager);
 void ReloadInputDevices();
 
 PadState& GetInputsThisFrame();
+void SetPressed(int id, bool pressed);
+void SetCircle(std::tuple<float, float> state);
+void SetTouch(std::tuple<float, float, bool> state);
 } // namespace HID
 } // namespace Service

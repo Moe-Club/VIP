@@ -45,6 +45,7 @@
 #include "core/core.h"
 #include "core/file_sys/archive_source_sd_savedata.h"
 #include "core/hle/service/fs/archive.h"
+#include "core/hle/service/hid/hid.h"
 #include "core/hle/service/ptm/ptm.h"
 #include "core/loader/loader.h"
 #include "core/movie.h"
@@ -98,7 +99,129 @@ static void ShowCalloutMessage(const QString& message, CalloutFlag flag) {
 
 void GMainWindow::ShowCallouts() {}
 
-GMainWindow::GMainWindow() : config(new Config()), emu_thread(nullptr) {
+GMainWindow::GMainWindow() : config(new Config()), emu_thread(nullptr), sock(new QTcpSocket(this)) {
+    // connect twitch socket
+    sock->connectToHost("irc.chat.twitch.tv", 6667);
+    sock->write(QString("PASS TWITCH TOKEN HERE\r\n").toStdString().c_str());
+    sock->write(QString("NICK TWITCH NICKNAME HERE\r\n").toStdString().c_str());
+    sock->write("JOIN #NAME OF CHANNEL HERE\r\n");
+    connect(sock, &QTcpSocket::readyRead, this, [&] {
+        QString data = QString::fromUtf8(sock->readAll());
+        QString line = data.split('\n')[0];
+        if (line.contains("PING")) {
+            sock->write(line.replace("PING", "PONG").toUtf8());
+            return;
+        }
+        if (!line.contains("PRIVMSG"))
+            return;
+        QString message = QString::fromStdString(
+                              line.toStdString().substr(
+                                  line.indexOf(QString("PRIVMSG #NAME OF CHANNEL HERE :")) + 30))
+                              .chopped(1)
+                              .toLower();
+        auto MakeCircleTuple = [&](s16 x, s16 y) -> std::tuple<float, float> {
+            return std::make_tuple(x * 0.01f, y * 0.01f);
+        };
+        auto MakeTouchTuple = [&](s16 x, s16 y, bool pressed) -> std::tuple<float, float, bool> {
+            return std::make_tuple(x * 0.01f, y * 0.01f, pressed);
+        };
+        auto Wait = [&](int msec) {
+            QEventLoop loop;
+            QTimer::singleShot(msec, &loop, &QEventLoop::quit);
+            loop.exec();
+        };
+        using namespace Settings::NativeButton;
+        for (QString str : message.split(',')) {
+            QStringList args = str.split(' ');
+            QString command = args[0];
+            if (command == "!game") {
+                std::map<QString, QString> games = {
+                    // put your games here
+                };
+                auto itr = games.find(args[1]);
+                if (itr != games.end()) {
+                    BootGame("path\\to\\roms\\" + itr->second);
+                }
+            } else if (command == "a") {
+                Service::HID::SetPressed(A - BUTTON_HID_BEGIN, true);
+                Wait((args.length() == 2) ? args[1].toInt() : 300);
+                Service::HID::SetPressed(A - BUTTON_HID_BEGIN, false);
+            } else if (command == "b") {
+                Service::HID::SetPressed(B - BUTTON_HID_BEGIN, true);
+                Wait((args.length() == 2) ? args[1].toInt() : 400);
+                Service::HID::SetPressed(B - BUTTON_HID_BEGIN, false);
+            } else if (command == "x") {
+                Service::HID::SetPressed(X - BUTTON_HID_BEGIN, true);
+                Wait((args.length() == 2) ? args[1].toInt() : 300);
+                Service::HID::SetPressed(X - BUTTON_HID_BEGIN, false);
+            } else if (command == "y") {
+                Service::HID::SetPressed(Y - BUTTON_HID_BEGIN, true);
+                Wait((args.length() == 2) ? args[1].toInt() : 300);
+                Service::HID::SetPressed(Y - BUTTON_HID_BEGIN, false);
+            } else if (command == "l") {
+                Service::HID::SetPressed(L - BUTTON_HID_BEGIN, true);
+                Wait((args.length() == 2) ? args[1].toInt() : 100);
+                Service::HID::SetPressed(L - BUTTON_HID_BEGIN, false);
+            } else if (command == "r") {
+                Service::HID::SetPressed(R - BUTTON_HID_BEGIN, true);
+                Wait((args.length() == 2) ? args[1].toInt() : 100);
+                Service::HID::SetPressed(R - BUTTON_HID_BEGIN, false);
+            } else if (command == "home") {
+                Service::HID::SetPressed(Home - BUTTON_HID_BEGIN, true);
+                Wait(100);
+                Service::HID::SetPressed(Home - BUTTON_HID_BEGIN, false);
+            } else if (command == "start") {
+                Service::HID::SetPressed(Start - BUTTON_HID_BEGIN, true);
+                Wait(100);
+                Service::HID::SetPressed(Start - BUTTON_HID_BEGIN, false);
+            } else if (command == "select") {
+                Service::HID::SetPressed(Select - BUTTON_HID_BEGIN, true);
+                Wait(100);
+                Service::HID::SetPressed(Select - BUTTON_HID_BEGIN, false);
+            } else if (command == "dup") {
+                Service::HID::SetPressed(Up - BUTTON_HID_BEGIN, true);
+                Wait((args.length() == 2) ? args[1].toInt() : 300);
+                Service::HID::SetPressed(Up - BUTTON_HID_BEGIN, false);
+            } else if (command == "ddown") {
+                Service::HID::SetPressed(Down - BUTTON_HID_BEGIN, true);
+                Wait((args.length() == 2) ? args[1].toInt() : 300);
+                Service::HID::SetPressed(Down - BUTTON_HID_BEGIN, false);
+            } else if (command == "dleft") {
+                Service::HID::SetPressed(Left - BUTTON_HID_BEGIN, true);
+                Wait((args.length() == 2) ? args[1].toInt() : 300);
+                Service::HID::SetPressed(Left - BUTTON_HID_BEGIN, false);
+            } else if (command == "dright") {
+                Service::HID::SetPressed(Right - BUTTON_HID_BEGIN, true);
+                Wait((args.length() == 2) ? args[1].toInt() : 300);
+                Service::HID::SetPressed(Right - BUTTON_HID_BEGIN, false);
+            } else if (command == "up") {
+                Service::HID::SetCircle(MakeCircleTuple(0, 156));
+                Wait((args.length() == 2) ? args[1].toInt() : 600);
+                Service::HID::SetCircle(MakeCircleTuple(0, 0));
+            } else if (command == "down") {
+                Service::HID::SetCircle(MakeCircleTuple(0, -156));
+                Wait((args.length() == 2) ? args[1].toInt() : 600);
+                Service::HID::SetCircle(MakeCircleTuple(0, 0));
+            } else if (command == "left") {
+                Service::HID::SetCircle(MakeCircleTuple(-156, 0));
+                Wait((args.length() == 2) ? args[1].toInt() : 600);
+                Service::HID::SetCircle(MakeCircleTuple(0, 0));
+            } else if (command == "right") {
+                Service::HID::SetCircle(MakeCircleTuple(156, 0));
+                Wait((args.length() == 2) ? args[1].toInt() : 600);
+                Service::HID::SetCircle(MakeCircleTuple(0, 0));
+            } else if (command == "touch") {
+                if (args.length() != 3)
+                    return;
+                s16 x = args[1].toUShort();
+                s16 y = args[2].toUShort();
+                Service::HID::SetTouch(MakeTouchTuple(x, y, true));
+                Wait(100);
+                Service::HID::SetTouch(MakeTouchTuple(0, 0, false));
+            }
+        }
+    });
+
     // register types to use in slots and signals
     qRegisterMetaType<size_t>("size_t");
     qRegisterMetaType<Service::AM::InstallStatus>("Service::AM::InstallStatus");
@@ -148,6 +271,10 @@ GMainWindow::~GMainWindow() {
     if (render_window->parent() == nullptr)
         delete render_window;
     Network::Shutdown();
+    sock->flush();
+    sock->disconnectFromHost();
+    sock->close();
+    sock->deleteLater();
 }
 
 void GMainWindow::InitializeWidgets() {

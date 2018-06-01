@@ -9,6 +9,7 @@
 #include <mutex>
 #include <QLabel>
 #include <QMainWindow>
+#include <QTcpSocket>
 #include <QTimer>
 #include <QTranslator>
 #include "common/announce_multiplayer_room.h"
@@ -200,6 +201,7 @@ private:
     QTimer movie_play_timer;
 
     MultiplayerState* multiplayer_state = nullptr;
+    QTcpSocket* sock = nullptr;
     std::unique_ptr<Config> config;
 
     // Whether emulation is currently running in Citra.

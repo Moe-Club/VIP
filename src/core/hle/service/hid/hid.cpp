@@ -83,22 +83,28 @@ void Module::UpdatePadCallback(u64 userdata, int cycles_late) {
 
     PadState state;
     using namespace Settings::NativeButton;
-    state.a.Assign(buttons[A - BUTTON_HID_BEGIN]->GetStatus());
-    state.b.Assign(buttons[B - BUTTON_HID_BEGIN]->GetStatus());
-    state.x.Assign(buttons[X - BUTTON_HID_BEGIN]->GetStatus());
-    state.y.Assign(buttons[Y - BUTTON_HID_BEGIN]->GetStatus());
-    state.right.Assign(buttons[Right - BUTTON_HID_BEGIN]->GetStatus());
-    state.left.Assign(buttons[Left - BUTTON_HID_BEGIN]->GetStatus());
-    state.up.Assign(buttons[Up - BUTTON_HID_BEGIN]->GetStatus());
-    state.down.Assign(buttons[Down - BUTTON_HID_BEGIN]->GetStatus());
-    state.l.Assign(buttons[L - BUTTON_HID_BEGIN]->GetStatus());
-    state.r.Assign(buttons[R - BUTTON_HID_BEGIN]->GetStatus());
-    state.start.Assign(buttons[Start - BUTTON_HID_BEGIN]->GetStatus());
-    state.select.Assign(buttons[Select - BUTTON_HID_BEGIN]->GetStatus());
+    auto Pressed = [&](int id) -> int {
+        return static_cast<int>(buttons[id]->GetStatus()) | static_cast<int>(buttons_twitch[id]);
+    };
+    state.a.Assign(Pressed(A - BUTTON_HID_BEGIN));
+    state.b.Assign(Pressed(B - BUTTON_HID_BEGIN));
+    state.x.Assign(Pressed(X - BUTTON_HID_BEGIN));
+    state.y.Assign(Pressed(Y - BUTTON_HID_BEGIN));
+    state.right.Assign(Pressed(Right - BUTTON_HID_BEGIN));
+    state.left.Assign(Pressed(Left - BUTTON_HID_BEGIN));
+    state.up.Assign(Pressed(Up - BUTTON_HID_BEGIN));
+    state.down.Assign(Pressed(Down - BUTTON_HID_BEGIN));
+    state.l.Assign(Pressed(L - BUTTON_HID_BEGIN));
+    state.r.Assign(Pressed(R - BUTTON_HID_BEGIN));
+    state.start.Assign(Pressed(Start - BUTTON_HID_BEGIN));
+    state.select.Assign(Pressed(Select - BUTTON_HID_BEGIN));
 
     // Get current circle pad position and update circle pad direction
     float circle_pad_x_f, circle_pad_y_f;
-    std::tie(circle_pad_x_f, circle_pad_y_f) = circle_pad->GetStatus();
+    if (circle_pad_twitch != std::make_tuple(0, 0))
+        std::tie(circle_pad_x_f, circle_pad_y_f) = circle_pad_twitch;
+    else
+        std::tie(circle_pad_x_f, circle_pad_y_f) = circle_pad->GetStatus();
     constexpr int MAX_CIRCLEPAD_POS = 0x9C; // Max value for a circle pad position
     s16 circle_pad_x = static_cast<s16>(circle_pad_x_f * MAX_CIRCLEPAD_POS);
     s16 circle_pad_y = static_cast<s16>(circle_pad_y_f * MAX_CIRCLEPAD_POS);
@@ -146,7 +152,10 @@ void Module::UpdatePadCallback(u64 userdata, int cycles_late) {
     TouchDataEntry& touch_entry = mem->touch.entries[mem->touch.index];
     bool pressed = false;
     float x, y;
-    std::tie(x, y, pressed) = touch_device->GetStatus();
+    if (touch_twitch != std::make_tuple(0, 0, false))
+        std::tie(x, y, pressed) = touch_twitch;
+    else
+        std::tie(x, y, pressed) = touch_device->GetStatus();
     touch_entry.x = static_cast<u16>(x * Core::kScreenBottomWidth);
     touch_entry.y = static_cast<u16>(y * Core::kScreenBottomHeight);
     touch_entry.valid.Assign(pressed ? 1 : 0);
@@ -217,6 +226,18 @@ void Module::UpdateAccelerometerCallback(u64 userdata, int cycles_late) {
 
 PadState& GetInputsThisFrame() {
     return inputs_this_frame;
+}
+
+void SetPressed(int id, bool pressed) {
+    current_module.lock()->SetPressed(id, pressed);
+}
+
+void SetCircle(std::tuple<float, float> state) {
+    current_module.lock()->SetCircle(state);
+}
+
+void SetTouch(std::tuple<float, float, bool> state) {
+    current_module.lock()->SetTouch(state);
 }
 
 void Module::UpdateGyroscopeCallback(u64 userdata, int cycles_late) {
