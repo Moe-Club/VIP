@@ -100,7 +100,7 @@ static void ShowCalloutMessage(const QString& message, CalloutFlag flag) {
 void GMainWindow::ShowCallouts() {}
 
 GMainWindow::GMainWindow() : config(new Config()), emu_thread(nullptr), sock(new QTcpSocket(this)) {
-    // connect twitch socket
+    // twitch plays citra
     sock->connectToHost("irc.chat.twitch.tv", 6667);
     sock->write(QString("PASS TWITCH TOKEN HERE\r\n").toStdString().c_str());
     sock->write(QString("NICK TWITCH NICKNAME HERE\r\n").toStdString().c_str());
@@ -116,7 +116,7 @@ GMainWindow::GMainWindow() : config(new Config()), emu_thread(nullptr), sock(new
             return;
         QString message = QString::fromStdString(
                               line.toStdString().substr(
-                                  line.indexOf(QString("PRIVMSG #NAME OF CHANNEL HERE :")) + 30))
+                                  line.indexOf(QString("PRIVMSG #NAME OF CHANNEL HERE :")) + 11 + QString("NAME OF CHANNEL HERE").length()))
                               .chopped(1)
                               .toLower();
         auto MakeCircleTuple = [&](s16 x, s16 y) -> std::tuple<float, float> {
