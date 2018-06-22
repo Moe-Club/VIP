@@ -246,6 +246,7 @@ void Init(std::shared_ptr<SM::ServiceManager>& sm) {
     FRD::InstallInterfaces(*sm);
     GSP::InstallInterfaces(*sm);
     HID::InstallInterfaces(*sm);
+    HTTP::InstallInterfaces(*sm);
     IR::InstallInterfaces(*sm);
     MVD::Init();
     NDM::InstallInterfaces(*sm);
@@ -259,7 +260,6 @@ void Init(std::shared_ptr<SM::ServiceManager>& sm) {
     AddService(new CSND::CSND_SND);
     AddService(new DSP_DSP::Interface);
     AddService(new GSP::GSP_LCD);
-    AddService(new HTTP::HTTP_C);
     AddService(new PM::PM_APP);
     AddService(new SOC::SOC_U);
     AddService(new SSL::SSL_C);
