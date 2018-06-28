@@ -30,7 +30,7 @@
 #include "core/hle/service/fs/archive.h"
 #include "core/hle/service/fs/fs_user.h"
 #include "core/hle/service/gsp/gsp.h"
-#include "core/hle/service/gsp_lcd.h"
+#include "core/hle/service/gsp/gsp_lcd.h"
 #include "core/hle/service/hid/hid.h"
 #include "core/hle/service/http_c.h"
 #include "core/hle/service/ir/ir.h"
@@ -259,7 +259,6 @@ void Init(std::shared_ptr<SM::ServiceManager>& sm) {
 
     AddService(new CSND::CSND_SND);
     AddService(new DSP_DSP::Interface);
-    AddService(new GSP::GSP_LCD);
     AddService(new PM::PM_APP);
     AddService(new SOC::SOC_U);
     AddService(new SSL::SSL_C);
